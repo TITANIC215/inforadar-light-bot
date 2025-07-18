@@ -4,3 +4,7 @@ selenium
 webdriver-manager
 requests
 beautifulsoup4
+selenium
+undetected-chromedriver
+selenium
+undetected-chromedriver

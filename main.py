@@ -157,3 +157,84 @@ def main():
 
 if __name__ == "__main__":
     main()
+import time
+import logging
+import requests
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+
+# Telegram credentials
+TOKEN = "7604446870:AAHpQRJQfMKCPsCt6CG86hPMZtsh24jevts"
+CHAT_ID = "719052415"
+
+# URLs
+URLS = [
+    "https://inforadar.live/#/dashboard/soccer/live",
+    "https://inforadar.live/#/dashboard/basketball/live"
+]
+
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s: %(message)s')
+
+def send_telegram_message(text):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    data = {"chat_id": CHAT_ID, "text": text}
+    try:
+        requests.post(url, data=data)
+    except Exception as e:
+        logging.error(f"Telegram error: {e}")
+
+def init_driver():
+    options = uc.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    driver = uc.Chrome(options=options)
+    return driver
+
+def scrape_inforadar():
+    driver = init_driver()
+    results = []
+    try:
+        for url in URLS:
+            driver.get(url)
+            time.sleep(5)  # περιμένει να φορτώσει JS
+            page_text = driver.page_source
+            if "Alg.1" in page_text:
+                logging.info(f"Found Alg.1 on {url}")
+                results.append(page_text)
+            else:
+                logging.info(f"No Alg.1 data on {url}")
+    except Exception as e:
+        logging.error(f"Scrape error: {e}")
+    finally:
+        driver.quit()
+    return results
+
+def main():
+    logging.info("Bot started successfully.")
+    while True:
+        try:
+            logging.info("Checking Inforadar data...")
+            data = scrape_inforadar()
+            if not data:
+                logging.info("No data found yet.")
+            else:
+                for raw in data:
+                    lines = raw.splitlines()
+                    for line in lines:
+                        if "Alg.1" in line:
+                            try:
+                                value = float(line.split("Alg.1")[1].split(":")[1].strip().replace(",", "."))
+                                if value > 1.00 or value < -1.00:
+                                    message = f"🚨 ALERT: Value = {value}"
+                                    logging.info(message)
+                                    send_telegram_message(message)
+                            except:
+                                continue
+        except Exception as e:
+            logging.error(f"Main loop error: {e}")
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
