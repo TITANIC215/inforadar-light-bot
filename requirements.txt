@@ -1,2 +1,6 @@
 requests
 beautifulsoup4
+selenium
+webdriver-manager
+requests
+beautifulsoup4
